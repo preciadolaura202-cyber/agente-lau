@@ -21,21 +21,24 @@
         </section>
 
         <footer class="chat-input-area">
-            <input type="text" id="userInput" placeholder="Escribe tu mensaje..." onkeypress="handleKeyPress(event)">
-            <button onclick="sendMessage()">Enviar</button>
+            <input type="text" id="userInput" placeholder="Escribe tu mensaje..." onkeydown="handleKeyPress(event)">
+            <button id="sendButton" onclick="sendMessage()">Enviar</button>
         </footer>
     </main>
 
     <script>
         const chatMessages = document.getElementById('chatMessages');
         const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
 
         async function sendMessage() {
             const text = userInput.value.trim();
-            if (!text) return;
+            if (!text || sendButton.disabled) return;
 
             appendMessage(text, 'user');
             userInput.value = '';
+            sendButton.disabled = true;
+            sendButton.textContent = 'Enviando...';
             chatMessages.scrollTop = chatMessages.scrollHeight;
 
             try {
@@ -45,18 +48,26 @@
                     body: JSON.stringify({ message: text })
                 });
 
-                const data = await response.json();
-                
+                let data = {};
+                try {
+                    data = await response.json();
+                } catch (_) {
+                    data = {};
+                }
+
                 if (response.ok) {
                     appendMessage(data.response, 'bot');
                 } else {
-                    appendMessage('Ocurrió un error al procesar tu solicitud.', 'bot');
+                    appendMessage(data.detail || 'Ocurrió un error al procesar tu solicitud.', 'bot');
                 }
             } catch (error) {
                 appendMessage('No se pudo conectar con el servidor.', 'bot');
+            } finally {
+                sendButton.disabled = false;
+                sendButton.textContent = 'Enviar';
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                userInput.focus();
             }
-
-            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
         function appendMessage(text, sender) {
